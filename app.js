@@ -184,25 +184,31 @@
 
   /* ---------------- 平移 / 缩放交互 ---------------- */
   const active = new Map();
-  let panStart = null, pinch = null, downTarget = null, downPt = null, moved = false;
+  let panStart = null, pinch = null, downTarget = null, downPt = null, downAt = 0, moved = false;
+
+  // 这些区域不参与地图手势（详情页、遮罩、搜索下拉、表单控件）
+  const NO_MAP = '.detail, .scrim, .q-list, a, button, input, textarea, select, label';
 
   function onPointerDown(e) {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
-    if (e.target.closest('.addm, .m-del, .empty')) return;
+    if (e.target.closest && e.target.closest(NO_MAP)) return;
+
+    const inViewport = viewport.contains(e.target);
     stopViewAnim();
     active.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
     if (active.size === 1) {
-      downTarget = e.target;
+      downTarget = inViewport ? e.target : null;
       downPt = { x: e.clientX, y: e.clientY };
+      downAt = Date.now();
       moved = false;
       pinch = null;
-      panStart = { cx: e.clientX, cy: e.clientY, vx: view.x, vy: view.y };
+      panStart = inViewport ? { cx: e.clientX, cy: e.clientY, vx: view.x, vy: view.y } : null;
       window.addEventListener('pointermove', onPointerMove);
       window.addEventListener('pointerup', onPointerUp);
       window.addEventListener('pointercancel', onPointerUp);
     } else if (active.size === 2) {
-      startPinch();
+      startPinch();   // 双指：从页面任何位置开始都能缩放地图
     }
   }
 
@@ -215,6 +221,7 @@
       k: view.k, vx: view.x, vy: view.y
     };
     panStart = null;
+    downTarget = null;
     moved = true;
   }
 
@@ -234,14 +241,17 @@
       view.k = k;
       view.x = cx - rect.left - wx * k;
       view.y = cy - rect.top - wy * k;
-      clampView();
+      // 手势进行中不做边界钳制，否则贴边缩放会被“顶”回去
       applyView();
       return;
     }
 
     if (panStart) {
       const dx = e.clientX - panStart.cx, dy = e.clientY - panStart.cy;
-      if (Math.abs(dx) + Math.abs(dy) > 4) moved = true;
+      if (!moved) {
+        if (Math.hypot(dx, dy) < 8) return;   // 8px 内不位移，避免轻点就晃一下
+        moved = true;
+      }
       view.x = panStart.vx + dx;
       view.y = panStart.vy + dy;
       clampView();
@@ -251,30 +261,37 @@
 
   function onPointerUp(e) {
     const wasSingle = active.size === 1;
+    const hadPinch = !!pinch;
     active.delete(e.pointerId);
 
     if (active.size === 0) {
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
       window.removeEventListener('pointercancel', onPointerUp);
-      if (wasSingle && !moved && downTarget) {
+
+      // 位移小于 12px 且松手够快 → 认为是点击商户（手指抖动不再被误判成拖动）
+      if (wasSingle && downTarget && downPt && !editMode && Date.now() - downAt < 700) {
         const card = downTarget.closest && downTarget.closest('.m');
-        if (card && !editMode) openDetail(card);
+        const dist = Math.hypot(e.clientX - downPt.x, e.clientY - downPt.y);
+        if (card && dist < 12) openDetail(card);
       }
+
+      if (hadPinch) clampView();
       panStart = null;
       pinch = null;
       downTarget = null;
       downPt = null;
       moved = false;
     } else if (active.size === 1) {
-      // 双指变单指：以当前手指位置重新开始平移
+      // 双指变单指：以剩下这根手指的位置继续平移
       const p = Array.from(active.values())[0];
       panStart = { cx: p.x, cy: p.y, vx: view.x, vy: view.y };
       pinch = null;
+      if (hadPinch) clampView();
     }
   }
 
-  viewport.addEventListener('pointerdown', onPointerDown);
+  document.addEventListener('pointerdown', onPointerDown, { passive: true });
 
   viewport.addEventListener('wheel', function (e) {
     e.preventDefault();
@@ -338,7 +355,8 @@
     });
   }
 
-  function addLabel(cls, text, x, y, align) {    const el = document.createElement('div');
+  function addLabel(cls, text, x, y, align) {
+    const el = document.createElement('div');
     el.className = 'map-label ' + cls;
     el.textContent = text;
     el.style.top = y + 'px';

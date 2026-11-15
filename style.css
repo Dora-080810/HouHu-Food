@@ -30,6 +30,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior: none;
+  touch-action: manipulation;
 }
 
 /* ---------------- 顶栏 ---------------- */
@@ -576,6 +577,16 @@ body.edit .addm { display: grid; }
   box-shadow: 0 5px 12px rgba(0, 60, 120, .1);
 }
 
+/* 触摸时给明确按压反馈，轻点也能看出点到了 */
+@media (hover: none) {
+  .m:active {
+    transform: scale(.96);
+    background: linear-gradient(180deg, #DBECFC, #CBE3FA);
+    border-color: #8FB9E0;
+    box-shadow: 0 2px 6px rgba(0, 60, 120, .12);
+  }
+}
+
 .m-nm {
   display: block;
   max-width: 100%;
@@ -992,6 +1003,7 @@ body.edit .empty:hover { background: #F1F8FF; border-color: #A8CAEA; }
   .info-chip { left: 10px; bottom: 10px; padding: 6px 11px; font-size: 10.5px; }
   .info-chip .sync em { display: none; }
   .info-chip .sync { padding-left: 7px; gap: 0; }
+  .m { font-size: 12px; }
   .watermark { font-size: clamp(30px, 9.4vw, 58px); letter-spacing: .1em; }
 }
 
