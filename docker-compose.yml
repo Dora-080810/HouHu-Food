@@ -1,0 +1,13 @@
+services:
+  map:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      # 容器内固定用 /data，挂载到宿主机 ./data
+      DATA_DIR: /data
+    volumes:
+      - ./data:/data

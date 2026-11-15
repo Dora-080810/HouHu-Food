@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+<meta name="theme-color" content="#0057A8" />
+<meta name="description" content="后湖小区美食地图 · 中南大学 · 清水路 —— 按楼栋浏览、自由添加商户与图文笔记" />
+<title>后湖小区 · 美食地图</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230057A8'/%3E%3Ctext x='32' y='43' font-size='32' text-anchor='middle' fill='%23fff' font-family='sans-serif'%3E%E6%B9%96%3C/text%3E%3C/svg%3E" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="emblem" aria-label="中南大学">
+      <svg viewBox="0 0 64 64" role="img">
+        <circle cx="32" cy="32" r="31" fill="#0057A8" />
+        <circle cx="32" cy="32" r="31" fill="none" stroke="#ffffff" stroke-opacity=".22" />
+        <circle cx="32" cy="32" r="26.5" fill="none" stroke="#ffffff" stroke-opacity=".5" stroke-width="1.1" stroke-dasharray="2 3.2" />
+        <circle cx="32" cy="32" r="20.5" fill="#ffffff" fill-opacity=".1" />
+        <text x="32" y="39.6" text-anchor="middle" font-size="17.5" font-weight="700" fill="#ffffff"
+          font-family="'Songti SC','STSong','Noto Serif SC',serif" letter-spacing="1.5">中南</text>
+      </svg>
+    </span>
+    <div class="brand-txt">
+      <h1>后湖小区 · 美食地图</h1>
+      <p>清水路 · 社区美食</p>
+    </div>
+  </div>
+
+  <div class="search" id="search">
+    <svg class="s-ico" viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="10.5" cy="10.5" r="6.4" />
+      <line x1="15.2" y1="15.2" x2="20.6" y2="20.6" />
+    </svg>
+    <input id="q" type="text" placeholder="搜店铺 / 楼栋，回车跳转" autocomplete="off" spellcheck="false" />
+    <button class="s-clear" id="qClear" type="button" aria-label="清空搜索">×</button>
+    <ul class="q-list" id="qList"></ul>
+  </div>
+
+  <div class="tools">
+    <a class="chip user" id="btnAuth" hidden></a>
+    <button class="chip" id="btnEdit" type="button"><span class="dot"></span>编辑模式</button>
+    <button class="icon-btn" id="btnFit" type="button" title="全览" aria-label="全览">⤢</button>
+  </div>
+</header>
+
+<main class="stage">
+  <div class="viewport" id="viewport">
+    <div class="board" id="board"></div>
+  </div>
+
+  <!-- 背景水印 -->
+  <div class="watermark" aria-hidden="true">
+    <span>主干道禁止停车</span>
+    <span>违者锁车</span>
+  </div>
+
+  <div class="info-chip" id="infoChip">
+    <span class="ic-text" id="infoText">23 栋 · 0 家商户</span>
+    <span class="sync is-local" id="sync" title="数据保存位置"><i></i><em id="syncLabel">本机保存</em></span>
+  </div>
+
+  <!-- 固定坐标系：上北下南、左西右东 -->
+  <div class="hud" aria-hidden="true">
+    <div class="zoom">
+      <button type="button" data-zoom="in" aria-label="放大">＋</button>
+      <button type="button" data-zoom="out" aria-label="缩小">−</button>
+    </div>
+    <div class="compass">
+      <svg viewBox="0 0 104 104" role="img" aria-label="指北：上北下南，左西右东">
+        <line x1="30" y1="78" x2="30" y2="26" />
+        <line x1="30" y1="78" x2="84" y2="78" />
+        <polygon points="30,12 23,26 37,26" class="fill" />
+        <polygon points="96,78 82,71 82,85" class="fill" />
+        <text x="44" y="30">北</text>
+        <text x="72" y="96">东</text>
+      </svg>
+    </div>
+  </div>
+
+  <p class="hint" id="hint">拖动平移 · 双指/滚轮缩放 · 点商户看详情 · 编辑模式可拖动排序</p>
+</main>
+
+<!-- 详情页 -->
+<div class="scrim" id="scrim"></div>
+<aside class="detail" id="detail" aria-hidden="true">
+  <header class="d-head">
+    <button class="d-back" id="dClose" type="button" aria-label="返回">←</button>
+    <div class="d-title">
+      <input id="dName" class="d-name" type="text" placeholder="商户名称" maxlength="24" />
+      <div class="d-sub">
+        <span class="d-badge" id="dBadge">1 栋</span>
+        <span class="d-ro" id="dRO" hidden>只读</span>
+        <input id="dTag" class="d-tag" type="text" placeholder="分类，如 奶茶" maxlength="10" />
+      </div>
+    </div>
+  </header>
+
+  <div class="d-body" id="dBody"></div>
+
+  <footer class="d-foot">
+    <button class="btn soft" id="addText" type="button">＋ 文字</button>
+    <button class="btn soft" id="addImage" type="button">＋ 图片</button>
+    <button class="btn danger" id="delMerchant" type="button">删除商户</button>
+  </footer>
+</aside>
+
+<input type="file" id="fileInput" accept="image/*" multiple hidden />
+<div class="toast" id="toast"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
